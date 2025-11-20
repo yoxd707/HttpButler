@@ -1,0 +1,30 @@
+﻿namespace HttpButler.Services;
+
+public class HttpClientService : IHttpClientService
+{
+    private readonly IPathResolveService _pathResolveService;
+    private readonly IHttpClientFactory _httpClientFactory;
+
+    public HttpClientService(IPathResolveService pathResolveService, IHttpClientFactory httpClientFactory)
+    {
+        _pathResolveService = pathResolveService;
+        _httpClientFactory = httpClientFactory;
+    }
+
+    public async Task Get(string factoryKey, string route, object? parameters = null, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var httpClient = _httpClientFactory.CreateClient(factoryKey);
+
+            var uri = _pathResolveService.ResolveUri(route, parameters);
+
+            var response = await httpClient.GetAsync(uri, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            throw;
+        }
+    }
+
+}

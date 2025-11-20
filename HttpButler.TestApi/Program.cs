@@ -1,9 +1,10 @@
+using HttpButler;
 using HttpButler.TestApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddScoped<IExample>();
+builder.Services.AddHttpButler<IExample>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

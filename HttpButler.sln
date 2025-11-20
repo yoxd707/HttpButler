@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.13.35931.197 d17.13
+VisualStudioVersion = 17.13.35931.197
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HttpButler", "HttpButler\HttpButler.csproj", "{A157E12E-1A79-491B-ACBB-EDD26ACD72BC}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HttpButler.TestApi", "HttpButler.TestApi\HttpButler.TestApi.csproj", "{3C85C0BE-5FEA-4A52-A082-67ECAC38451A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HttpButler.Test", "HttpButler.Test\HttpButler.Test.csproj", "{C29CD70A-46DE-4B89-B697-8AFECBD63314}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{3C85C0BE-5FEA-4A52-A082-67ECAC38451A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3C85C0BE-5FEA-4A52-A082-67ECAC38451A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3C85C0BE-5FEA-4A52-A082-67ECAC38451A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C29CD70A-46DE-4B89-B697-8AFECBD63314}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C29CD70A-46DE-4B89-B697-8AFECBD63314}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C29CD70A-46DE-4B89-B697-8AFECBD63314}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C29CD70A-46DE-4B89-B697-8AFECBD63314}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
