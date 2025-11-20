@@ -8,14 +8,14 @@ public interface IExample
 {
     [HttpGet]
     [Route("ping")]
-    public Task PingAsync();                        // Route: v1/example/ping
+    public Task PingAsync();
 
     [HttpGet]
-    public Task<string> GetHelloAsync();            // Route: v1/example
+    public Task<string> GetHelloAsync();
 
     [HttpGet("{name}")]
-    public Task<string> GetHelloAsync(string name); // Route: v1/example/{name}
+    public Task<string> GetHelloAsync(string name);
 
     [HttpGet("{name}/{photoId}")]
-    public Task<string> GetHelloAsync(string name, int photoId = 0); // Route: v1/example/{name}/{photoId}
+    public Task<string> GetHelloAsync(string name, int photoId = 0);
 }

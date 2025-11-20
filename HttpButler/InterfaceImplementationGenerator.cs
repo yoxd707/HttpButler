@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Data;
+using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
@@ -54,16 +55,39 @@ public class InterfaceImplementationGenerator : IIncrementalGenerator
 
         var sb = new StringBuilder();
 
+        var className = $"gHttpButler_{interfaceName}";
+
+        // Namespace.
         sb.Append("namespace ")
             .Append(ns)
             .AppendLine(";");
 
-        sb.Append("public class gHttpButler_")
-            .Append(interfaceName)
+        // Class.
+        sb.Append("public class ")
+            .Append(className)
             .Append(" : ")
             .AppendLine(interfaceName);
 
         sb.AppendLine("{");
+
+        // Fields.
+        sb.Append(' ', 4)
+            .AppendLine("private readonly HttpButler.Services.IHttpClientService _httpClientService;");
+
+        // Constructor.
+        sb.Append(' ', 4)
+            .Append("public ")
+            .Append(className)
+            .AppendLine("(HttpButler.Services.IHttpClientService httpClientService)");
+
+        sb.Append(' ', 4)
+            .AppendLine("{");
+
+        sb.Append(' ', 8)
+            .AppendLine("_httpClientService = httpClientService;");
+
+        sb.Append(' ', 4)
+            .AppendLine("}");
 
         var taskSymbol = compilation.GetTypeByMetadataName("System.Threading.Tasks.Task");
         var taskOfTypeSymbol = compilation.GetTypeByMetadataName("System.Threading.Tasks.Task`1");
@@ -90,8 +114,22 @@ public class InterfaceImplementationGenerator : IIncrementalGenerator
                     : $"{p.ToDisplayString()} = {p.ExplicitDefaultValue ?? "null"}"
                 );
 
+            var routeAttr = member.GetAttributes()
+                .Where(attr =>
+                    {
+                        var attrClassName = attr.AttributeClass?.ToDisplayString();
+                        return (attrClassName == "HttpButler.Attributes.HttpGetAttribute" ||
+                            attrClassName == "HttpButler.Attributes.RouteAttribute") &&
+                            attr.ConstructorArguments.Length > 0;
+                    }
+                )
+                .FirstOrDefault();
+
+            var route = (routeAttr?.ConstructorArguments.FirstOrDefault().Value as string) ?? string.Empty;
+
+            // Inicio del método.
             sb.Append(' ', 4)
-                .Append("public ")
+                .Append("public async ")
                 .Append(returnType)
                 .Append(' ')
                 .Append(methodName)
@@ -105,46 +143,45 @@ public class InterfaceImplementationGenerator : IIncrementalGenerator
             sb.Append(' ', 4)
                 .AppendLine("{");
 
+            // Ruta.
+            sb.Append(' ', 8)
+                .Append("const string route = \"")
+                .Append(route)
+                .AppendLine("\";");
 
+            // Llamado al servicio.
+            sb.Append(' ', 8)
+                .Append("await _httpClientService.Get(\"")
+                .Append(className)
+                .Append("\", route, ");
 
+            if (parameters.Any())
+            {
+                // Anónimo con los parametros.
+                sb.AppendLine("new")
+                    .Append(' ', 8)
+                    .AppendLine("{")
+                    .Append(' ', 12)
+                    .AppendLine("test = 0")
+                    .Append(' ', 8)
+                    .AppendLine("}");
+            }
+            else
+            {
+                sb.Append("null");
+            }
+
+            sb.Append(' ', 8)
+                .AppendLine(");");
+
+            // Fin del método.
             sb.Append(' ', 4)
                 .AppendLine("}");
         }
 
         sb.AppendLine("}");
 
-        ctx.AddSource($"gHttpButler_{interfaceName}.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
-
-        //var compilation = context.Compilation;
-
-        //var httpButlerSymbol = compilation.GetTypeByMetadataName("HttpButler.Attributes.HttpButlerAttribute");
-        //if (httpButlerSymbol is null) return;
-
-        //var root = compilation.SyntaxTrees.First().GetRoot();
-
-        //foreach (var tree in compilation.SyntaxTrees)
-        //{
-        //    var model = compilation.GetSemanticModel(tree);
-
-        //    var interfaces = root
-        //        .DescendantNodes()
-        //        .OfType<InterfaceDeclarationSyntax>();
-
-        //    foreach (var interfaceSyntax in interfaces)
-        //    {
-        //        if (model.GetDeclaredSymbol(interfaceSyntax) is not INamedTypeSymbol interfaceSymbol)
-        //            continue;
-
-        //        var hasHttpButlerAttribute = interfaceSymbol
-        //            .GetAttributes()
-        //            .Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, httpButlerSymbol));
-
-        //        if (!hasHttpButlerAttribute)
-        //            continue;
-
-        //        GenerateImplementation(context, interfaceSymbol);
-        //    }
-        //}
+        ctx.AddSource($"{className}.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
     }
 
 }

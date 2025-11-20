@@ -1,4 +1,6 @@
-﻿namespace HttpButler.Services;
+﻿using System.Net.Http.Json;
+
+namespace HttpButler.Services;
 
 public class HttpClientService : IHttpClientService
 {
@@ -20,6 +22,28 @@ public class HttpClientService : IHttpClientService
             var uri = _pathResolveService.ResolveUri(route, parameters);
 
             var response = await httpClient.GetAsync(uri, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            throw;
+        }
+    }
+
+    public async Task<T?> Get<T>(string factoryKey, string route, object? parameters = null, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var httpClient = _httpClientFactory.CreateClient(factoryKey);
+
+            var uri = _pathResolveService.ResolveUri(route, parameters);
+
+            var response = await httpClient.GetAsync(uri, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+                return default;
+
+            var result = await response.Content.ReadFromJsonAsync<T>(cancellationToken: cancellationToken);
+            return result;
         }
         catch (Exception ex)
         {
