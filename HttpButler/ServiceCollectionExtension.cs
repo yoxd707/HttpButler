@@ -37,6 +37,7 @@ public static class ServiceCollectionExtension
     {
         services.AddHttpClient($"gHttpButler_{interfaceType.Name}", configureClient);
         services.AddScoped<IPathResolveService, PathResolveService>();
+        services.AddScoped<IHttpClientService, HttpClientService>();
         return services;
     }
 }

@@ -5,7 +5,7 @@ namespace HttpButler.Test;
 [TestClass]
 public sealed class PathResolveServiceTest
 {
-    private static readonly object[] ParametersTestData = new object[]
+    private static readonly dynamic[] ParametersTestData = new dynamic[]
     {
         new {
             userId = "A01",
