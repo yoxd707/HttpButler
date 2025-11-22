@@ -16,4 +16,7 @@ public interface IJsonPlaceHolderTodo
 {
     [HttpGet("todos/{todoId}")]
     Task<Todo?> GetTodoAsync(int todoId);
+
+    [HttpPost("todos")]
+    Task PostTodoAsync([ToBody]Todo todo);
 }

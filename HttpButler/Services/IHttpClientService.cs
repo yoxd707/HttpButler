@@ -7,4 +7,8 @@ public interface IHttpClientService
     Task<T> Get<T>(string factoryKey, string route, object? parameters = null, CancellationToken cancellationToken = default);
     Task<T?> GetWithNullableResult<T>(string factoryKey, string route, object? parameters = null, CancellationToken cancellationToken = default);
 
+    Task Post(string factoryKey, string route, object? parameters = null, object? body = null, CancellationToken cancellationToken = default);
+    Task<T> Post<T>(string factoryKey, string route, object? parameters = null, object? body = null, CancellationToken cancellationToken = default);
+    Task<T?> PostWithNullableResult<T>(string factoryKey, string route, object? parameters = null, object? body = null, CancellationToken cancellationToken = default);
+
 }

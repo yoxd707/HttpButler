@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace HttpButler.Attributes;
+﻿namespace HttpButler.Attributes;
 
 [AttributeUsage(AttributeTargets.Method | AttributeTargets.Interface)]
 public class RouteAttribute : Attribute

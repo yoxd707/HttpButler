@@ -133,6 +133,22 @@ public class InterfaceImplementationGenerator : IIncrementalGenerator
 
         foreach (var member in methods)
         {
+            var attributes = member.GetAttributes()
+                .Where(attr =>
+                {
+                    var attrClassName = attr.AttributeClass?.Name;
+                    return attrClassName == "HttpGetAttribute" ||
+                        attrClassName == "HttpPostAttribute" ||
+                        attrClassName == "RouteAttribute";
+                });
+
+            // TODO: Los métodos sin atributos deberían construirse arrojando una excepción.
+            if (!attributes.Any()) continue;    // De momento ignoramos el método.
+
+            var httpMethod = GetHttpMethodFromAttributes(attributes);
+
+            if (httpMethod is null) continue;   // De momento ignoramos el método.
+
             var returnType = member.ReturnType.ToDisplayString();
             var methodName = member.Name;
             var parameters = member.Parameters;
@@ -143,15 +159,8 @@ public class InterfaceImplementationGenerator : IIncrementalGenerator
             if (taskResultTypeIndex > 0)
                 taskResultType = returnType.Substring(taskResultTypeIndex + 1, returnType.Length - (taskResultTypeIndex + 2));
 
-            var routeAttr = member.GetAttributes()
-                .Where(attr =>
-                {
-                    var attrClassName = attr.AttributeClass?.ToDisplayString();
-                    return (attrClassName == "HttpButler.Attributes.HttpGetAttribute" ||
-                        attrClassName == "HttpButler.Attributes.RouteAttribute") &&
-                        attr.ConstructorArguments.Length > 0;
-                }
-                )
+            var routeAttr = attributes
+                .Where(attr => attr.ConstructorArguments.Length > 0)
                 .FirstOrDefault();
 
             var route = (routeAttr?.ConstructorArguments.FirstOrDefault().Value as string) ?? string.Empty;
@@ -191,22 +200,26 @@ public class InterfaceImplementationGenerator : IIncrementalGenerator
 
             if (taskResultTypeIndex > 0)
             {
-                sb.Append("return await _httpClientService.");
+                sb.Append("return await _httpClientService.")
+                    .Append(httpMethod.ToString());
 
                 if (taskResultType[taskResultType.Length - 1] == '?')
-                    sb.Append("GetWithNullableResult<");
+                    sb.Append("WithNullableResult<");
                 else
-                    sb.Append("Get<");
+                    sb.Append("<");
 
                 sb.Append(taskResultType)
                     .Append(">(\"");
             }
             else
-                sb.Append("await _httpClientService.Get(\"");
+                sb.Append("await _httpClientService.")
+                    .Append(httpMethod.ToString())
+                    .Append("(\"");
 
             sb.Append(className)
                 .Append("\", route, ");
 
+            // TODO: Separar en body, query, headers según los atributos de los parámetros.
             if (parameters.Any())
             {
                 // Anónimo con los parametros.
@@ -251,9 +264,6 @@ public class InterfaceImplementationGenerator : IIncrementalGenerator
 
         foreach (var item in list)
         {
-            //sb.AppendLine(
-            //    $"        services.AddScoped<{item.iface!.ToDisplayString()}, {item.ns}.{item.implName}>();"
-            //);
             sb.AppendLine(
                 $"        services.AddHttpButler<{item.iface!.ToDisplayString()}, {item.ns}.{item.implName}>();"
             );
@@ -264,6 +274,23 @@ public class InterfaceImplementationGenerator : IIncrementalGenerator
         sb.AppendLine("}");
 
         return sb.ToString();
+    }
+
+
+    private static HttpMethod? GetHttpMethodFromAttributes(IEnumerable<AttributeData> attributes)
+    {
+        var httpMethodAttr = attributes.FirstOrDefault(attr => attr.AttributeClass!.Name[0] == 'H');
+
+        if (httpMethodAttr is null || httpMethodAttr.AttributeClass is null)
+            return null;
+
+        var httpMethodAttrName = httpMethodAttr.AttributeClass.Name;
+        var httpMethodStr = httpMethodAttrName.Substring(4, httpMethodAttrName.Length - 13);
+
+        if (!Enum.TryParse<HttpMethod>(httpMethodStr, out var httpMethod))
+            return null;
+
+        return httpMethod;
     }
 
 }

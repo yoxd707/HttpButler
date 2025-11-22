@@ -54,4 +54,52 @@ public class HttpClientService : IHttpClientService
         }
     }
 
+    public async Task Post(string factoryKey, string route, object? parameters = null, object? body = null, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var httpClient = _httpClientFactory.CreateClient(factoryKey);
+
+            var uri = _pathResolveService.ResolveUri(route, parameters);
+
+            using HttpContent httpContent = body != null
+                ? JsonContent.Create(body)
+                : new StringContent(string.Empty);
+
+            var response = await httpClient.PostAsync(uri, httpContent, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            throw;
+        }
+    }
+
+    public async Task<T> Post<T>(string factoryKey, string route, object? parameters = null, object? body = null, CancellationToken cancellationToken = default)
+        => (await PostWithNullableResult<T>(factoryKey, route, parameters, body, cancellationToken)) ?? default!;
+
+    public async Task<T?> PostWithNullableResult<T>(string factoryKey, string route, object? parameters = null, object? body = null, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var httpClient = _httpClientFactory.CreateClient(factoryKey);
+
+            var uri = _pathResolveService.ResolveUri(route, parameters);
+
+            using HttpContent httpContent = body != null
+                ? JsonContent.Create(body)
+                : new StringContent(string.Empty);
+
+            var response = await httpClient.PostAsync(uri, httpContent, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+                return default;
+
+            var result = await response.Content.ReadFromJsonAsync<T>(cancellationToken: cancellationToken);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw;
+        }
+    }
 }
