@@ -1,20 +1,55 @@
 ﻿using HttpButler.Attributes;
 using HttpButler.Services;
 using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
 
 namespace HttpButler;
 
 public static class ServiceCollectionExtension
 {
-    public static IServiceCollection AddHttpButler<T>(this IServiceCollection services)
-        where T : class
-        => AddHttpButler(services, typeof(T));
+    public static IServiceCollection AddHttpButler<TIface, TImpl>(this IServiceCollection services)
+        where TIface : class
+        where TImpl : class, TIface
+    {
+        services.AddScoped<TIface, TImpl>();
+        AddHttpClient(services, typeof(TIface));
 
-    public static IServiceCollection AddHttpButler<T>(this IServiceCollection services, Action<HttpClient> configureClient)
-        where T : class
-        => AddHttpButler(services, typeof(T), configureClient);
+        // Solo se agregan una vez los servicios auxiliares.
+        if (!services.Any(x => x.ServiceType == typeof(IPathResolveService)))
+        {
+            services.AddScoped<IPathResolveService, PathResolveService>();
+            services.AddScoped<IHttpClientService, HttpClientService>();
+        }
 
-    public static IServiceCollection AddHttpButler(this IServiceCollection services, Type interfaceType)
+        return services;
+    }
+
+    public static IServiceCollection AddHttpButler(this IServiceCollection services, Assembly? assembly)
+    {
+        if (assembly is null)
+            throw new ArgumentNullException(nameof(assembly));
+
+        var interfaces = assembly.GetTypes()
+            .Where(t => t.IsInterface && t.GetCustomAttributes(typeof(HttpButlerAttribute), true).Any());
+
+        foreach (var iface in interfaces)
+        {
+            var impl = assembly.GetType($"{iface.Namespace}.gHttpButler_{iface.Name}");
+            
+            if (impl != null)
+            {
+                services.AddScoped(iface, impl);
+                AddHttpClient(services, iface);
+            }
+        }
+
+        services.AddScoped<IPathResolveService, PathResolveService>();
+        services.AddScoped<IHttpClientService, HttpClientService>();
+
+        return services;
+    }
+
+    internal static IServiceCollection AddHttpClient(this IServiceCollection services, Type interfaceType)
     {
         Action<HttpClient> configureClient = opt => { };
 
@@ -30,14 +65,13 @@ public static class ServiceCollectionExtension
             };
         }
 
-        return AddHttpButler(services, interfaceType, configureClient);
+        return AddHttpClient(services, interfaceType, configureClient);
     }
 
-    public static IServiceCollection AddHttpButler(this IServiceCollection services, Type interfaceType, Action<HttpClient> configureClient)
+    internal static IServiceCollection AddHttpClient(this IServiceCollection services, Type interfaceType, Action<HttpClient> configureClient)
     {
-        services.AddHttpClient($"gHttpButler_{interfaceType.Name}", configureClient);
-        services.AddScoped<IPathResolveService, PathResolveService>();
-        services.AddScoped<IHttpClientService, HttpClientService>();
+        var implTypeName = $"gHttpButler_{interfaceType.Name}";
+        services.AddHttpClient(implTypeName, configureClient);
         return services;
     }
 }

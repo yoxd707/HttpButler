@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HttpButler.Test", "HttpButl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HttpButler.Benchmark", "HttpButler.Benchmark\HttpButler.Benchmark.csproj", "{3E34B738-1298-4C9C-865E-1A0AAA2C9B51}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HttpButler.Generator", "HttpButler.Generator\HttpButler.Generator.csproj", "{1F7043D9-9287-4FF5-98E8-7E573AB7656A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{3E34B738-1298-4C9C-865E-1A0AAA2C9B51}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3E34B738-1298-4C9C-865E-1A0AAA2C9B51}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3E34B738-1298-4C9C-865E-1A0AAA2C9B51}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1F7043D9-9287-4FF5-98E8-7E573AB7656A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1F7043D9-9287-4FF5-98E8-7E573AB7656A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1F7043D9-9287-4FF5-98E8-7E573AB7656A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1F7043D9-9287-4FF5-98E8-7E573AB7656A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

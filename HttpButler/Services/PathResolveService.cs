@@ -32,7 +32,8 @@ public class PathResolveService : IPathResolveService
 
         var sb = new StringBuilder(256);
         var pathSpan = path.AsSpan();
-        
+
+        PropertyCache<T>.SetupPropertyCache(parameters);
         var props = PropertyCache<T>.Properties;
 
         int lastIndex = 0;
@@ -41,7 +42,7 @@ public class PathResolveService : IPathResolveService
         foreach (var matchParam in routeInfo.Params)
         {
             // Se agrega el segmento de ruta previo al parámetro.
-            sb.Append(pathSpan.Slice(lastIndex, matchParam.RouteIndex - lastIndex));
+            sb.Append(pathSpan.Slice(lastIndex, matchParam.RouteIndex - lastIndex).ToArray());
 
             // Se busca el parámetro en el objeto.
             if (TryGetPropertyValue(props, parameters, matchParam.Name, out var valueStr))
@@ -69,7 +70,7 @@ public class PathResolveService : IPathResolveService
 
         // Se agrega el resto de la ruta.
         if (lastIndex < path.Length)
-            sb.Append(pathSpan.Slice(lastIndex));
+            sb.Append(pathSpan.Slice(lastIndex).ToArray());
 
         // Manejo de Query Params adicionales (propiedades que no estaban en la ruta).
         bool hasQueryInBuilder = routeInfo.QueryStartIndex >= 0;
@@ -93,7 +94,7 @@ public class PathResolveService : IPathResolveService
                     sb.Append('?');
                     hasQueryInBuilder = true;
                 }
-                else if (sb[^1] != '&' && sb[^1] != '?')
+                else if (sb[sb.Length - 1] != '&' && sb[sb.Length - 1] != '?')
                 {
                     sb.Append('&');
                 }
@@ -118,6 +119,7 @@ public class PathResolveService : IPathResolveService
     }
 
     private static bool TryGetPropertyValue<T>(CachedProperty<T>[] props, T instance, string name, out string? value)
+        where T : class
     {
         foreach (var prop in props)
         {
@@ -178,14 +180,36 @@ public class PathResolveService : IPathResolveService
     /// <param name="Name">Nombre del parámetro.</param>
     /// <param name="Type">Tipo de parámetro.</param>
     /// <param name="RouteIndex">Índice en que el parámetro inicia sobre la ruta.</param>
-    private readonly record struct MatchParam(string Name, ParamType Type, int RouteIndex);
+    private readonly struct MatchParam
+    {
+        public string Name { get; }
+        public ParamType Type { get; }
+        public int RouteIndex { get; }
+
+        public MatchParam(string name, ParamType type, int routeIndex)
+        {
+            Name = name;
+            Type = type;
+            RouteIndex = routeIndex;
+        }
+    }
 
     /// <summary>
     /// Información de la ruta y sus parámetros.
     /// </summary>
     /// <param name="QueryStartIndex">Índice en el que inicia la query, -1 si no existe.</param>
     /// <param name="Params">Colección de coincidencias de parámetros en la ruta.</param>
-    private readonly record struct RouteInfo(int QueryStartIndex, MatchParam[] Params);
+    private readonly struct RouteInfo
+    {
+        public int QueryStartIndex { get; }
+        public MatchParam[] Params { get; }
+
+        public RouteInfo(int queryStartIndex, MatchParam[] @params)
+        {
+            QueryStartIndex = queryStartIndex;
+            Params = @params;
+        }
+    }
 
     /// <summary>
     /// Propiedad cacheada para acceso rápido al valor.
@@ -193,33 +217,54 @@ public class PathResolveService : IPathResolveService
     /// <typeparam name="T">Tipo del cual se cacheó la propiedad.</typeparam>
     /// <param name="Name">Nombre de la propiedad.</param>
     /// <param name="Getter">Función para obetener valor de la propiedad.</param>
-    private readonly record struct CachedProperty<T>(string Name, Func<T, object?> Getter);
+    private readonly struct CachedProperty<T>
+        where T : class
+    {
+        public string Name { get; }
+        public Func<T, object?> Getter { get; }
+
+        public CachedProperty(string name, Func<T, object?> getter)
+        {
+            Name = name;
+            Getter = getter;
+        }
+    }
 
     /// <summary>
     /// Cache estática de propiedades por tipo.
     /// </summary>
     /// <typeparam name="T">Tipo del cual se cachean las propiedades.</typeparam>
     private static class PropertyCache<T>
+        where T : class
     {
-        public static readonly CachedProperty<T>[] Properties;
+        private static CachedProperty<T>[]? properties;
+        public static CachedProperty<T>[] Properties => properties ?? new CachedProperty<T>[0];
 
-        static PropertyCache()
+        public static void SetupPropertyCache(T obj)
         {
-            var props = typeof(T).GetProperties();
-            Properties = new CachedProperty<T>[props.Length];
+            if (properties is not null) return;
+
+            var objType = obj.GetType();
+            var props = objType.GetProperties();
+            var tempProperties = new CachedProperty<T>[props.Length];
 
             for (int i = 0; i < props.Length; i++)
             {
                 var p = props[i];
+                var getterMethod = p.GetGetMethod();
+                if (getterMethod is null) continue;
 
                 var instanceParam = System.Linq.Expressions.Expression.Parameter(typeof(T), "instance");
-                var propertyAccess = System.Linq.Expressions.Expression.Property(instanceParam, p);
+                var castedInstance = System.Linq.Expressions.Expression.Convert(instanceParam, objType);
+                var propertyAccess = System.Linq.Expressions.Expression.Call(castedInstance, getterMethod);
                 var castToObject = System.Linq.Expressions.Expression.Convert(propertyAccess, typeof(object));
                 var lambda = System.Linq.Expressions.Expression.Lambda<Func<T, object?>>(castToObject, instanceParam);
                 var getter = lambda.Compile();
 
-                Properties[i] = new CachedProperty<T>(p.Name, getter);
+                tempProperties[i] = new CachedProperty<T>(p.Name, getter);
             }
+
+            properties = tempProperties;
         }
     }
 
