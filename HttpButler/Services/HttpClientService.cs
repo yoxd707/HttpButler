@@ -30,26 +30,7 @@ public class HttpClientService : IHttpClientService
     }
 
     public async Task<T> Get<T>(string factoryKey, string route, object? parameters = null, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var httpClient = _httpClientFactory.CreateClient(factoryKey);
-
-            var uri = _pathResolveService.ResolveUri(route, parameters);
-
-            var response = await httpClient.GetAsync(uri, cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
-                return default!;
-
-            var result = await response.Content.ReadFromJsonAsync<T>(cancellationToken: cancellationToken);
-            return result ?? default!;
-        }
-        catch (Exception ex)
-        {
-            throw;
-        }
-    }
+        => (await GetWithNullableResult<T>(factoryKey, route, parameters, cancellationToken)) ?? default!;
 
     public async Task<T?> GetWithNullableResult<T>(string factoryKey, string route, object? parameters = null, CancellationToken cancellationToken = default)
     {
