@@ -1,5 +1,4 @@
 ﻿using HttpButler.Attributes;
-using HttpButler.TestApi.Dtos;
 
 namespace HttpButler.TestApi.Services;
 
@@ -14,10 +13,10 @@ public interface IExample
     [HttpGet]
     public Task<string> GetHelloAsync();
 
-    [HttpGet("{name}")]
-    public Task<string> GetHelloAsync(string name);
+    //[HttpGet("{name}")]
+    //public Task<string> GetHelloAsync(string name);
 
-    [HttpGet("{name}/{photoId}")]
-    public Task<string?> GetHelloAsync(string name, int photoId = 0);
+    //[HttpGet("{name}/{photoId}")]
+    //public Task<string?> GetHelloAsync(string name, int photoId = 0);
 
 }

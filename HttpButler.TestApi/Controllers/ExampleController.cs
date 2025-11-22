@@ -14,7 +14,7 @@ public class MyTodoController : Controller
         _jsonPlaceHolderTodoService = jsonPlaceHolderTodoService;
     }
 
-    [HttpGet("my-todo/{todoId}")]
+    [HttpGet("/{todoId}")]
     public async Task<IActionResult> GetTodo(int todoId)
     {
         var todo = await _jsonPlaceHolderTodoService.GetTodoAsync(todoId);

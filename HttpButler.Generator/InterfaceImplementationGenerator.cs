@@ -10,96 +10,144 @@ public class InterfaceImplementationGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var interfaces = context.SyntaxProvider
-            .CreateSyntaxProvider(
-                predicate: IsInterfaceWithAttributes,
-                transform: GetInterfaceSymbol
+        IncrementalValuesProvider<InterfaceModel> interfaceInfos = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                "HttpButler.Attributes.HttpButlerAttribute",
+                predicate: static (node, _) => node is InterfaceDeclarationSyntax,
+                transform: GetInterfaceModelOrNull
             )
-            .Where(static symbol => symbol is not null)!;
+            .Where(static m => m is not null)
+            .Select(static (m, cancellationToken) => (InterfaceModel)m!);
 
-        var compilation = context.CompilationProvider;
+        // Generate Implementations.
+        context.RegisterSourceOutput(interfaceInfos, static (spc, model) =>
+        {
+            var source = GenerateImplementation(model);
+            spc.AddSource($"gHttpButler_{model.Name}.g.cs", source);
+        });
 
-        var combined = interfaces.Combine(compilation);
+        // Service Collection.
+        var collectedInterfaces = interfaceInfos.Collect();
 
-        var implementations = combined.Select(
-            static (tuple, _) =>
-            {
-                var (iface, compilation) = tuple;
+        context.RegisterSourceOutput(collectedInterfaces, static (spc, models) =>
+        {
+            if (models.IsDefaultOrEmpty) return;
 
-                var (ns, implName, implSource) = GenerateImplementation(compilation, iface!);
-
-                return (iface, ns, implName, implSource);
-            }
-        )
-        .Where(x => x.implSource is not null)!;
-
-        context.RegisterSourceOutput(
-            implementations,
-            static (spc, item) =>
-            {
-                spc.AddSource($"{item.implName}.g.cs", item.implSource!);
-            }
-        );
-
-        context.RegisterSourceOutput(
-            implementations.Collect(),
-            static (spc, list) =>
-            {
-                var source = GenerateServiceCollectionExtension(list);
-                spc.AddSource("gServiceCollectionExtension.g.cs", source);
-            }
-        );
+            var source = GenerateServiceCollectionExtension(models);
+            spc.AddSource("gServiceCollectionExtension.g.cs", source);
+        });
     }
 
-    private static bool IsInterfaceWithAttributes(SyntaxNode node, CancellationToken token)
-        => node is InterfaceDeclarationSyntax interfaceDecl &&
-           interfaceDecl.AttributeLists.Any();
-
-    private static INamedTypeSymbol? GetInterfaceSymbol(
-        GeneratorSyntaxContext ctx,
-        CancellationToken token)
+    private static InterfaceModel? GetInterfaceModelOrNull(GeneratorAttributeSyntaxContext context, CancellationToken token)
     {
-        if (ctx.SemanticModel
-            .GetDeclaredSymbol((InterfaceDeclarationSyntax)ctx.Node, token) is not INamedTypeSymbol symbol)
-            return null;
+        var symbol = (INamedTypeSymbol)context.TargetSymbol;
 
-        if (symbol.GetAttributes().Any(attr => attr.AttributeClass?.ToDisplayString() == "HttpButler.Attributes.HttpButlerAttribute"))
-            return symbol;
+        var methods = new List<MethodModel>();
 
-        return null;
+        var taskSymbol = context.SemanticModel.Compilation.GetTypeByMetadataName("System.Threading.Tasks.Task");
+        var taskOfTSymbol = context.SemanticModel.Compilation.GetTypeByMetadataName("System.Threading.Tasks.Task`1");
+
+        foreach (var member in symbol.GetMembers().OfType<IMethodSymbol>())
+        {
+            if (token.IsCancellationRequested) break;
+
+            if (member.MethodKind != MethodKind.Ordinary) continue;
+
+            // Lógica de extracción de atributos.
+            var attributes = member.GetAttributes()
+                .Where(x => x.AttributeClass?.ContainingNamespace?.ToDisplayString() == "HttpButler.Attributes");
+
+            // TODO: Los métodos sin atributos deberían construirse arrojando una excepción.
+            if (!attributes.Any()) continue;        // De momento ignoramos el método.
+
+            var httpMethodEnum = GetHttpMethodFromAttributes(attributes);
+
+            if (httpMethodEnum is null) continue;   // De momento ignoramos el método.
+
+            var routeAttr = attributes
+                .Where(attr => attr.ConstructorArguments.Length > 0)
+                .FirstOrDefault();
+
+            var route = routeAttr?.ConstructorArguments.FirstOrDefault().Value as string ?? "";
+
+            // Analizar Retorno.
+            bool isGenericTask = false;
+            string returnTypeGenericArg = "";
+            string returnTypeStr = member.ReturnType.ToDisplayString();
+
+            if (SymbolEqualityComparer.Default.Equals(member.ReturnType.OriginalDefinition, taskOfTSymbol))
+            {
+                isGenericTask = true;
+                if (member.ReturnType is INamedTypeSymbol namedRet && namedRet.TypeArguments.Length > 0)
+                {
+                    returnTypeGenericArg = namedRet.TypeArguments[0].ToDisplayString();
+                }
+            }
+            else if (!SymbolEqualityComparer.Default.Equals(member.ReturnType, taskSymbol))
+            {
+                // No es Task ni Task<T>, de momento ignoramos.
+                continue;
+            }
+
+            // Analizar Parámetros
+            var parameters = new List<ParameterModel>();
+            foreach (var p in member.Parameters)
+            {
+                var paramModel = new ParameterModel(
+                    p.Name,
+                    p.Type.ToDisplayString(),
+                    p.HasExplicitDefaultValue ? p.ExplicitDefaultValue!.ToString() : null,
+                    p.HasExplicitDefaultValue
+                );
+
+                parameters.Add(paramModel);
+            }
+
+            methods.Add(new MethodModel(
+                member.Name,
+                returnTypeStr,
+                returnTypeGenericArg,
+                isGenericTask,
+                route,
+                httpMethodEnum.Value,
+                parameters
+            ));
+        }
+
+        string ns = symbol.ContainingNamespace.IsGlobalNamespace ? "HttpButler.Generated" : symbol.ContainingNamespace.ToDisplayString();
+
+        return new InterfaceModel(ns, symbol.Name, methods);
     }
 
-    private static (string ns, string implName, string implSource) GenerateImplementation(Compilation compilation, INamedTypeSymbol symbol)
+    
+    private static string GenerateImplementation(InterfaceModel interfaceModel)
     {
-        var interfaceName = symbol.Name;
+        var sb = new StringBuilder(1024);
 
-        string? ns = null;
+        var className = $"gHttpButler_{interfaceModel.Name}";
 
-        if (!symbol.ContainingNamespace.IsGlobalNamespace)
-            ns = symbol.ContainingNamespace.ToString();
-
-        ns ??= "HttpButler.Generated";
-
-        var sb = new StringBuilder();
-
-        var className = $"gHttpButler_{interfaceName}";
+        sb.AppendLine("#nullable enable")
+            .AppendLine();
 
         // Namespace.
         sb.Append("namespace ")
-            .Append(ns)
-            .AppendLine(";");
+            .Append(interfaceModel.Namespace)
+            .AppendLine(";")
+            .AppendLine();
 
         // Class.
         sb.Append("public class ")
             .Append(className)
             .Append(" : ")
-            .AppendLine(interfaceName);
+            .AppendLine(interfaceModel.Name);
 
-        sb.AppendLine("{");
+        sb.AppendLine("{")
+            .AppendLine();
 
         // Fields.
         sb.Append(' ', 4)
-            .AppendLine("private readonly HttpButler.Services.IHttpClientService _httpClientService;");
+            .AppendLine("private readonly HttpButler.Services.IHttpClientService _httpClientService;")
+            .AppendLine();
 
         // Constructor.
         sb.Append(' ', 4)
@@ -114,74 +162,31 @@ public class InterfaceImplementationGenerator : IIncrementalGenerator
             .AppendLine("_httpClientService = httpClientService;");
 
         sb.Append(' ', 4)
-            .AppendLine("}");
+            .AppendLine("}")
+            .AppendLine();
 
-        var taskSymbol = compilation.GetTypeByMetadataName("System.Threading.Tasks.Task");
-        var taskOfTypeSymbol = compilation.GetTypeByMetadataName("System.Threading.Tasks.Task`1");
-
-        var methods = symbol
-            .GetMembers()
-            .OfType<IMethodSymbol>()
-            .Where(m => m.MethodKind == MethodKind.Ordinary)
-            .Where(m =>
-                SymbolEqualityComparer.Default.Equals(m.ReturnType, taskSymbol) ||
-                (
-                    m.ReturnType is INamedTypeSymbol namedType &&
-                    SymbolEqualityComparer.Default.Equals(namedType.OriginalDefinition, taskOfTypeSymbol)
-                )
-            );
-
-        foreach (var member in methods)
+        foreach (var method in interfaceModel.Methods)
         {
-            var attributes = member.GetAttributes()
-                .Where(attr =>
-                {
-                    var attrClassName = attr.AttributeClass?.Name;
-                    return attrClassName == "HttpGetAttribute" ||
-                        attrClassName == "HttpPostAttribute" ||
-                        attrClassName == "RouteAttribute";
-                });
-
-            // TODO: Los métodos sin atributos deberían construirse arrojando una excepción.
-            if (!attributes.Any()) continue;    // De momento ignoramos el método.
-
-            var httpMethod = GetHttpMethodFromAttributes(attributes);
-
-            if (httpMethod is null) continue;   // De momento ignoramos el método.
-
-            var returnType = member.ReturnType.ToDisplayString();
-            var methodName = member.Name;
-            var parameters = member.Parameters;
-
-            var taskResultTypeIndex = returnType.IndexOf('<');
-            var taskResultType = string.Empty;
-
-            if (taskResultTypeIndex > 0)
-                taskResultType = returnType.Substring(taskResultTypeIndex + 1, returnType.Length - (taskResultTypeIndex + 2));
-
-            var routeAttr = attributes
-                .Where(attr => attr.ConstructorArguments.Length > 0)
-                .FirstOrDefault();
-
-            var route = (routeAttr?.ConstructorArguments.FirstOrDefault().Value as string) ?? string.Empty;
-
             // Inicio del método.
             sb.Append(' ', 4)
                 .Append("public async ")
-                .Append(returnType)
+                .Append(method.ReturnType)
                 .Append(' ')
-                .Append(methodName)
+                .Append(method.Name)
                 .Append('(');
 
-            if (parameters.Any())
+            foreach (var @param in method.Parameters)
             {
-                var @params = string.Join(", ", parameters.Select(
-                    p => !p.HasExplicitDefaultValue
-                        ? p.ToDisplayString()
-                        : $"{p.ToDisplayString()} = {p.ExplicitDefaultValue ?? "null"}"
-                ));
+                if (sb[sb.Length - 1] != '(')
+                    sb.Append(", ");
 
-                sb.Append(@params);
+                sb.Append(@param.Type)
+                    .Append(' ')
+                    .Append(@param.Name);
+
+                if (@param.HasExplicitDefaultValue)
+                    sb.Append(" = ")
+                        .Append(@param.ExplicitDefaultValue);
             }
 
             sb.AppendLine(")");
@@ -192,42 +197,42 @@ public class InterfaceImplementationGenerator : IIncrementalGenerator
             // Ruta.
             sb.Append(' ', 8)
                 .Append("const string route = \"")
-                .Append(route)
+                .Append(method.Route)
                 .AppendLine("\";");
 
             // Llamado al servicio.
             sb.Append(' ', 8);
 
-            if (taskResultTypeIndex > 0)
+            if (method.IsGenericTask)
             {
                 sb.Append("return await _httpClientService.")
-                    .Append(httpMethod.ToString());
+                    .Append(method.HttpMethod.ToString());
 
-                if (taskResultType[taskResultType.Length - 1] == '?')
+                if (method.ReturnType[method.ReturnType.Length - 1] == '?')
                     sb.Append("WithNullableResult<");
                 else
                     sb.Append("<");
 
-                sb.Append(taskResultType)
+                sb.Append(method.ReturnTypeGenericArgument)
                     .Append(">(\"");
             }
             else
                 sb.Append("await _httpClientService.")
-                    .Append(httpMethod.ToString())
+                    .Append(method.HttpMethod.ToString())
                     .Append("(\"");
 
             sb.Append(className)
                 .Append("\", route, ");
 
             // TODO: Separar en body, query, headers según los atributos de los parámetros.
-            if (parameters.Any())
+            if (method.Parameters.Any())
             {
                 // Anónimo con los parametros.
                 sb.AppendLine("new")
                     .Append(' ', 8)
                     .AppendLine("{");
 
-                foreach (var p in parameters)
+                foreach (var p in method.Parameters)
                     sb.Append(' ', 12)
                         .Append(p.Name)
                         .AppendLine(",");
@@ -242,30 +247,32 @@ public class InterfaceImplementationGenerator : IIncrementalGenerator
 
             // Fin del método.
             sb.Append(' ', 4)
-                .AppendLine("}");
+                .AppendLine("}")
+                .AppendLine();
         }
 
         sb.AppendLine("}");
 
-        return (ns, className, sb.ToString());
+        return sb.ToString();
     }
 
-    private static string GenerateServiceCollectionExtension(ImmutableArray<(INamedTypeSymbol? iface, string ns, string implName, string implSource)> list)
+    private static string GenerateServiceCollectionExtension(ImmutableArray<InterfaceModel> models)
     {
-        var sb = new StringBuilder();
+        var sb = new StringBuilder(1024);
 
         sb.AppendLine("using Microsoft.Extensions.DependencyInjection;");
-        sb.AppendLine($"namespace HttpButler;");
+        sb.AppendLine();
+        sb.AppendLine("namespace HttpButler;");
         sb.AppendLine();
         sb.AppendLine("public static class gServiceCollectionExtension");
         sb.AppendLine("{");
         sb.AppendLine("    public static IServiceCollection AddHttpButler(this IServiceCollection services)");
         sb.AppendLine("    {");
 
-        foreach (var item in list)
+        foreach (var item in models)
         {
             sb.AppendLine(
-                $"        services.AddHttpButler<{item.iface!.ToDisplayString()}, {item.ns}.{item.implName}>();"
+                $"        services.AddHttpButler<{item.Namespace}.{item.Name}, {item.Namespace}.gHttpButler_{item.Name}>();"
             );
         }
 

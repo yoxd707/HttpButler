@@ -12,6 +12,12 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)\GeneratedFiles</CompilerGeneratedFilesOutputPath>
+    <Features>$(Features);runtimesourcegenerators</Features>
+  </PropertyGroup>
+  
   <ItemGroup>
     <ProjectReference Include="..\HttpButler\HttpButler.csproj" />
     <ProjectReference Include="..\HttpButler.Generator\HttpButler.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />

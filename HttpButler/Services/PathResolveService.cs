@@ -180,36 +180,14 @@ public class PathResolveService : IPathResolveService
     /// <param name="Name">Nombre del parámetro.</param>
     /// <param name="Type">Tipo de parámetro.</param>
     /// <param name="RouteIndex">Índice en que el parámetro inicia sobre la ruta.</param>
-    private readonly struct MatchParam
-    {
-        public string Name { get; }
-        public ParamType Type { get; }
-        public int RouteIndex { get; }
-
-        public MatchParam(string name, ParamType type, int routeIndex)
-        {
-            Name = name;
-            Type = type;
-            RouteIndex = routeIndex;
-        }
-    }
+    private record struct MatchParam(string Name, ParamType Type, int RouteIndex);
 
     /// <summary>
     /// Información de la ruta y sus parámetros.
     /// </summary>
     /// <param name="QueryStartIndex">Índice en el que inicia la query, -1 si no existe.</param>
     /// <param name="Params">Colección de coincidencias de parámetros en la ruta.</param>
-    private readonly struct RouteInfo
-    {
-        public int QueryStartIndex { get; }
-        public MatchParam[] Params { get; }
-
-        public RouteInfo(int queryStartIndex, MatchParam[] @params)
-        {
-            QueryStartIndex = queryStartIndex;
-            Params = @params;
-        }
-    }
+    private record struct RouteInfo(int QueryStartIndex, PathResolveService.MatchParam[] Params);
 
     /// <summary>
     /// Propiedad cacheada para acceso rápido al valor.
@@ -217,18 +195,7 @@ public class PathResolveService : IPathResolveService
     /// <typeparam name="T">Tipo del cual se cacheó la propiedad.</typeparam>
     /// <param name="Name">Nombre de la propiedad.</param>
     /// <param name="Getter">Función para obetener valor de la propiedad.</param>
-    private readonly struct CachedProperty<T>
-        where T : class
-    {
-        public string Name { get; }
-        public Func<T, object?> Getter { get; }
-
-        public CachedProperty(string name, Func<T, object?> getter)
-        {
-            Name = name;
-            Getter = getter;
-        }
-    }
+    private record struct CachedProperty<T>(string Name, Func<T, object?> Getter) where T : class;
 
     /// <summary>
     /// Cache estática de propiedades por tipo.
