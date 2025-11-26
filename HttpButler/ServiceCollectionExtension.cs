@@ -1,7 +1,6 @@
 ﻿using HttpButler.Attributes;
 using HttpButler.Services;
 using Microsoft.Extensions.DependencyInjection;
-using System.Reflection;
 
 namespace HttpButler;
 
@@ -24,30 +23,30 @@ public static class ServiceCollectionExtension
         return services;
     }
 
-    public static IServiceCollection AddHttpButler(this IServiceCollection services, Assembly? assembly)
-    {
-        if (assembly is null)
-            throw new ArgumentNullException(nameof(assembly));
+    //public static IServiceCollection AddHttpButler(this IServiceCollection services, Assembly? assembly)
+    //{
+    //    if (assembly is null)
+    //        throw new ArgumentNullException(nameof(assembly));
 
-        var interfaces = assembly.GetTypes()
-            .Where(t => t.IsInterface && t.GetCustomAttributes(typeof(HttpButlerAttribute), true).Any());
+    //    var interfaces = assembly.GetTypes()
+    //        .Where(t => t.IsInterface && t.GetCustomAttributes(typeof(HttpButlerAttribute), true).Any());
 
-        foreach (var iface in interfaces)
-        {
-            var impl = assembly.GetType($"{iface.Namespace}.gHttpButler_{iface.Name}");
+    //    foreach (var iface in interfaces)
+    //    {
+    //        var impl = assembly.GetType($"{iface.Namespace}.gHttpButler_{iface.Name}");
             
-            if (impl != null)
-            {
-                services.AddScoped(iface, impl);
-                AddHttpClient(services, iface);
-            }
-        }
+    //        if (impl != null)
+    //        {
+    //            services.AddScoped(iface, impl);
+    //            AddHttpClient(services, iface);
+    //        }
+    //    }
 
-        services.AddScoped<IPathResolveService, PathResolveService>();
-        services.AddScoped<IHttpClientService, HttpClientService>();
+    //    services.AddScoped<IPathResolveService, PathResolveService>();
+    //    services.AddScoped<IHttpClientService, HttpClientService>();
 
-        return services;
-    }
+    //    return services;
+    //}
 
     internal static IServiceCollection AddHttpClient(this IServiceCollection services, Type interfaceType)
     {
