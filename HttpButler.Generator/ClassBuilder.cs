@@ -74,16 +74,14 @@ internal class ClassBuilder(InterfaceModel ifaceModel)
     }
 
     private void BuildMethod(MethodModel method)
-        {
-            // Inicio del método.
+    {
+        // Inicio del método.
         _stringBuilder.AppendMethod(method)
             .AppendIdentation(_identLevel);
 
         AppendOpenKey();
 
-            AppendOpenKey(sb);
-
-            // Ruta.
+        // Ruta.
         _stringBuilder.AppendIdentation(_identLevel)
                 .Append("const string route = \"")
                 .Append(method.Route)
@@ -131,29 +129,29 @@ internal class ClassBuilder(InterfaceModel ifaceModel)
             }
         }
 
-            // Llamado al servicio.
+        // Llamado al servicio.
         _stringBuilder.AppendIdentation(_identLevel);
 
-            if (method.IsGenericTask)
-            {
+        if (method.IsGenericTask)
+        {
             _stringBuilder.Append("return await _httpClientService.")
-                    .Append(method.HttpMethod.ToString());
+                .Append(method.HttpMethod.ToString());
 
-                if (method.ReturnType[method.ReturnType.Length - 1] == '?')
+            if (method.ReturnType[method.ReturnType.Length - 1] == '?')
                 _stringBuilder.Append("WithNullableResult<");
-                else
+            else
                 _stringBuilder.Append("<");
 
             _stringBuilder.Append(method.ReturnTypeGenericArgument)
-                    .Append(">(\"");
-            }
-            else
+                .Append(">(\"");
+        }
+        else
             _stringBuilder.Append("await _httpClientService.")
-                    .Append(method.HttpMethod.ToString())
-                    .Append("(\"");
+                .Append(method.HttpMethod.ToString())
+                .Append("(\"");
 
         _stringBuilder.Append(_ifaceModel.ClassName)
-                .Append("\", route, ");
+            .Append("\", route, ");
 
         _stringBuilder.Append(hasQueryParams ? "qParams" : "null");
 
@@ -163,7 +161,7 @@ internal class ClassBuilder(InterfaceModel ifaceModel)
 
         _stringBuilder.AppendLine(");");
 
-            // Fin del método.
+        // Fin del método.
         AppendClosedKey();
         _stringBuilder.AppendLine();
     }
