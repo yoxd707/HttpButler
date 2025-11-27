@@ -87,9 +87,9 @@ internal class ClassBuilder(InterfaceModel ifaceModel)
                 .Append(method.Route)
                 .AppendLine("\";");
 
-        // Query Params.
+        // Query and Route Params.
         var queryParams = method.Parameters
-            .Where(p => !p.Attributes.Any() || p.Attributes.Where(a => a == "ToQueryAttribute").Any());
+            .Where(p => !p.Attributes.Any() || p.Attributes.Where(a => a == "ToQueryAttribute" || a == "ToRouteAttribute").Any());
 
         var hasQueryParams = queryParams.Any();
 
@@ -105,7 +105,7 @@ internal class ClassBuilder(InterfaceModel ifaceModel)
 
         // Body Params.
         IEnumerable<ParameterModel> bodyParams;
-        var acceptBodyParams = method.HttpMethod == HttpMethod.Post;
+        var acceptBodyParams = method.HttpMethod == HttpMethod.Post || method.HttpMethod == HttpMethod.Put;
         var hasBodyParams = false;
 
         if (acceptBodyParams)

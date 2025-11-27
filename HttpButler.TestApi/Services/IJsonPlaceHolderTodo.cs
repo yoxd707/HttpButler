@@ -12,4 +12,10 @@ public interface IJsonPlaceHolderTodo
 
     [HttpPost("todos")]
     Task PostTodoAsync([ToBody] TodoDto todo);
+
+    [HttpDelete("todos/{todoId}")]
+    Task DeleteTodoAsync(int todoId);
+
+    [HttpPut("todos/{todoId}")]
+    Task<TodoDto?> PutTodoAsync(int todoId, [ToBody] TodoDto todo);
 }
