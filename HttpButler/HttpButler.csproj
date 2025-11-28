@@ -5,6 +5,15 @@
     <LangVersion>latestMajor</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>c-sharp;http;client;dotnet;web-api;dotnet-core;source-generator;incremental-generator</PackageTags>
+    <RepositoryUrl>https://github.com/yoxd707/HttpButler.git</RepositoryUrl>
+    <Description>HttpButler es una librería ligera de C# que simplifica la creación de clientes HTTP tipados generando automáticamente implementaciones de interfaces mediante source generators.</Description>
+    <NeutralLanguage>es-419</NeutralLanguage>
+    <PackageVersion>1.0.0-alpha</PackageVersion>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+    <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,6 +24,17 @@
 
   <ItemGroup>
     <Folder Include="Utils\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\LICENSE.txt">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>
