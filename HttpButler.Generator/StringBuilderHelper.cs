@@ -59,7 +59,7 @@ internal static class StringBuilderHelper
     public static StringBuilder AppendMethod(this StringBuilder sb, MethodModel method)
         => sb.AppendIdentation()
             .Append("public async ")
-            .Append(method.ReturnType)
+            .Append(method.ReturnType.StringRepresentation)
             .Append(' ')
             .Append(method.Name)
             .Append('(')

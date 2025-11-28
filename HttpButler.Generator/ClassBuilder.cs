@@ -81,6 +81,16 @@ internal class ClassBuilder(InterfaceModel ifaceModel)
 
         AppendOpenKey();
 
+        if (method.ReturnType.IsGeneric &&
+            !method.ReturnType.GenericArguments[0].IsNullable &&
+            method.ReturnType.GenericArguments[0].IsReferenceType)
+            _stringBuilder.AppendIdentation(_identLevel)
+                .Append("#warning \"The method ")
+                .Append(method.Name)
+                .Append(" of ")
+                .Append(_ifaceModel.Name)
+                .AppendLine(" contains a not nullable reference type, but if the http request fails, it returns a default type (null).\".");
+
         // Ruta.
         _stringBuilder.AppendIdentation(_identLevel)
                 .Append("const string route = \"")
@@ -132,17 +142,17 @@ internal class ClassBuilder(InterfaceModel ifaceModel)
         // Llamado al servicio.
         _stringBuilder.AppendIdentation(_identLevel);
 
-        if (method.IsGenericTask)
+        if (method.ReturnType.IsGeneric)
         {
             _stringBuilder.Append("return await _httpClientService.")
                 .Append(method.HttpMethod.ToString());
 
-            if (method.ReturnType[method.ReturnType.Length - 1] == '?')
+            if (method.ReturnType.GenericArguments[0].IsNullable)
                 _stringBuilder.Append("WithNullableResult<");
             else
                 _stringBuilder.Append("<");
 
-            _stringBuilder.Append(method.ReturnTypeGenericArgument)
+            _stringBuilder.Append(method.ReturnType.GenericArguments[0].StringRepresentation)
                 .Append(">(\"");
         }
         else

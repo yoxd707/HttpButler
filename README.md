@@ -60,11 +60,9 @@ En tu `Program.cs`, registra la interfaz usando `AddHttpButler`:
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
 
+// Se debe compilar el proyecto para que el generador cree las implementaciones antes de agregarlas
 // Registrar todas las interfaces generadas automáticamente
 builder.Services.AddHttpButler();
-
-// O registrar manualmente cada interface
-builder.Services.AddHttpButler<IJsonPlaceHolderTodo, gHttpButler_IJsonPlaceHolderTodo>();
 
 var app = builder.Build();
 ```

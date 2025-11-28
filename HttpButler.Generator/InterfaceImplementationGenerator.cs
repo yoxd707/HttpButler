@@ -70,23 +70,37 @@ public class InterfaceImplementationGenerator : IIncrementalGenerator
             var route = routeAttr?.ConstructorArguments.FirstOrDefault().Value as string ?? "";
 
             // Analizar Retorno.
+            TypeModel returnType;
+            List<TypeModel> returnTypeGenericArgs = [];
             bool isGenericTask = false;
-            string returnTypeGenericArg = "";
-            string returnTypeStr = member.ReturnType.ToDisplayString();
 
             if (SymbolEqualityComparer.Default.Equals(member.ReturnType.OriginalDefinition, taskOfTSymbol))
             {
-                isGenericTask = true;
                 if (member.ReturnType is INamedTypeSymbol namedRet && namedRet.TypeArguments.Length > 0)
                 {
-                    returnTypeGenericArg = namedRet.TypeArguments[0].ToDisplayString();
+                    var arg = namedRet.TypeArguments[0];
+                    isGenericTask = true;
+                    returnTypeGenericArgs.Add(new TypeModel(
+                        StringRepresentation: arg.ToDisplayString(),
+                        IsGeneric: false,
+                        GenericArguments: [],
+                        IsNullable: arg.NullableAnnotation == NullableAnnotation.Annotated,
+                        IsTask: false,
+                        IsReferenceType: arg.IsReferenceType
+                    ));
                 }
             }
             else if (!SymbolEqualityComparer.Default.Equals(member.ReturnType, taskSymbol))
-            {
-                // No es Task ni Task<T>, de momento ignoramos.
-                continue;
-            }
+                continue; // Si no es Task ni Task<T>, de momento ignoramos.
+
+            returnType = new TypeModel(
+                    StringRepresentation: member.ReturnType.ToDisplayString(),
+                    IsGeneric: isGenericTask,
+                    GenericArguments: returnTypeGenericArgs,
+                    IsNullable: false,
+                    IsTask: true,
+                    IsReferenceType: false
+                );
 
             // Analizar Parámetros
             var parameters = new List<ParameterModel>();
@@ -107,9 +121,7 @@ public class InterfaceImplementationGenerator : IIncrementalGenerator
 
             methods.Add(new MethodModel(
                 member.Name,
-                returnTypeStr,
-                returnTypeGenericArg,
-                isGenericTask,
+                returnType,
                 route,
                 httpMethodEnum.Value,
                 parameters

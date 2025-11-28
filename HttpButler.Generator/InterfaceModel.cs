@@ -13,9 +13,7 @@ internal record struct InterfaceModel
 internal record struct MethodModel
 (
     string Name,
-    string ReturnType,
-    string ReturnTypeGenericArgument,
-    bool IsGenericTask,
+    TypeModel ReturnType,
     string Route,
     HttpMethod HttpMethod,
     List<ParameterModel> Parameters
@@ -40,4 +38,14 @@ internal record struct FieldModel
 (
     string Name,
     string Type
+);
+
+internal record struct TypeModel
+(
+    string StringRepresentation,
+    bool IsGeneric,
+    List<TypeModel> GenericArguments,
+    bool IsNullable,
+    bool IsTask,
+    bool IsReferenceType
 );
