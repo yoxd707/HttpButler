@@ -7,20 +7,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="HttpButler" Version="1.0.1-alpha" />
+    <PackageReference Include="HttpButler.Generator" Version="1.0.1-alpha" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
   </ItemGroup>
-
+  
   <PropertyGroup>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)\GeneratedFiles</CompilerGeneratedFilesOutputPath>
     <Features>$(Features);runtimesourcegenerators</Features>
   </PropertyGroup>
-  
-  <ItemGroup>
-    <ProjectReference Include="..\HttpButler\HttpButler.csproj" />
-    <ProjectReference Include="..\HttpButler.Generator\HttpButler.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-  </ItemGroup>
 
 </Project>

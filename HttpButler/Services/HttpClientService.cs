@@ -26,7 +26,7 @@ public class HttpClientService : IHttpClientService
     /// <param name="pathResolveService">Servicio de resolución de rutas.</param>
     /// <param name="httpClientFactory">Servicio de fabricación de clientes HTTP.</param>
     /// <param name="logger">Servicio opcional de registros y captura de errores.</param>
-    public HttpClientService(IPathResolveService pathResolveService, IHttpClientFactory httpClientFactory, ILogger? logger)
+    public HttpClientService(IPathResolveService pathResolveService, IHttpClientFactory httpClientFactory, ILogger<HttpClientService>? logger = null)
     {
         _pathResolveService = pathResolveService;
         _httpClientFactory = httpClientFactory;

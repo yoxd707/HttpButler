@@ -11,7 +11,7 @@
     <RepositoryUrl>https://github.com/yoxd707/HttpButler.git</RepositoryUrl>
     <Description>HttpButler es una librería ligera de C# que simplifica la creación de clientes HTTP tipados generando automáticamente implementaciones de interfaces mediante source generators.</Description>
     <NeutralLanguage>es-419</NeutralLanguage>
-    <PackageVersion>1.0.0-alpha</PackageVersion>
+    <PackageVersion>1.0.1-alpha</PackageVersion>
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
   </PropertyGroup>
