@@ -172,20 +172,18 @@ public class InterfaceImplementationGenerator : IIncrementalGenerator
         sb.AppendLine("{");
         sb.AppendLine("    public static IServiceCollection AddHttpButler(this IServiceCollection services)");
         sb.AppendLine("    {");
-
-        //if (models.Length > 0)
-        //{
-        //    sb.AppendLine($"        var assembly = System.Reflection.Assembly.GetAssembly(typeof({models[0].Namespace}.{models[0].Name}));");
-        //    sb.AppendLine($"        ServiceCollectionExtension.AddHttpButler(services, assembly);");
-        //}
+        sb.AppendLine("        services.AddHttpButler(options =>");
+        sb.AppendLine("        {");
 
         foreach (var item in models)
         {
             sb.AppendLine(
-                $"        services.AddHttpButler<{item.Namespace}.{item.Name}, {item.Namespace}.gHttpButler_{item.Name}>();"
+                $"            options.AddHttpInterface<{item.Namespace}.{item.Name}, {item.Namespace}.gHttpButler_{item.Name}>();"
             );
         }
 
+        sb.AppendLine("        });");
+        sb.AppendLine();
         sb.AppendLine("        return services;");
         sb.AppendLine("    }");
         sb.AppendLine("}");
