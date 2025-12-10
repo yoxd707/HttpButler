@@ -64,6 +64,25 @@ var builder = WebApplication.CreateBuilder(args);
 // Registrar todas las interfaces generadas automáticamente
 builder.Services.AddHttpButler();
 
+// En caso de que requieras configurar las interfaces:
+builder.Services.AddHttpButler(options => {
+    options.RegisterHttpInterfaces();   // Registra todas las interfaces automáticamente.
+    // Configuraciones extra...
+});
+
+var app = builder.Build();
+```
+
+Puedes también registrar manualmente cada interfaz:
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddHttpButler(options => {
+    // Busca su implementación automáticamente.
+    options.AddHttpInterface<IJsonPlaceHolderTodo>();
+});
+
 var app = builder.Build();
 ```
 
@@ -178,6 +197,39 @@ HttpButler/
 
 HttpButler.Generator/
 └── InterfaceImplementationGenerator  # Source Generator que crea las implementaciones
+```
+
+## Configuraciones
+
+### Personalizar serialización/deserialización JSON
+
+Puedes configurar un JsonSerializerOptions para serializar/deserializar los cuerpos y resultados de consultas HTTP.
+
+Configurar un JsonSerializerOptions predeterminado para todas las interfaces:
+
+```csharp
+builder.Services.AddHttpButler(options => {
+    // Esta opción sobrescribe el JsonSerializerOptions default del Runtime.
+    options.AddDefaultJsonOptions(new JsonSerializerOptions());
+});
+```
+
+Configurar un JsonSerializerOptions por interfaz ya registrada:
+
+```csharp
+builder.Services.AddHttpButler(options => {
+    // Esta opción sobrescribe el AddDefaultJsonOptions para la interfaz específicada.
+    options.AddInterfaceJsonOptions<IJsonPlaceHolderTodo>(new JsonSerializerOptions());
+});
+```
+
+Configurar un JsonSerializerOptions al momento de registrar la interfaz:
+
+```csharp
+builder.Services.AddHttpButler(options => {
+    // Esta opción sobrescribe el AddDefaultJsonOptions para la interfaz específicada.
+    options.AddHttpInterface<IJsonPlaceHolderTodo>(new JsonSerializerOptions());
+});
 ```
 
 ## Ejemplo Completo
