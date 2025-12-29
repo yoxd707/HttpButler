@@ -53,6 +53,11 @@ public class HttpClientService : IHttpClientService
             var httpClient = _httpClientFactory.CreateClient(implName);
 
             var uri = _pathResolveService.ResolveUri(route, parameters);
+
+            uri = uri.IsAbsoluteUri
+                ? uri
+                : new Uri(uri.ToString().TrimStart('/'), UriKind.Relative);
+
             var req = new HttpRequestMessage(method, uri);
 
             if (method == HttpMethod.Post || method == HttpMethod.Put)

@@ -13,12 +13,15 @@ public class HttpButlerOptions
 {
     private readonly Dictionary<Type, Type> _interfaces;
     private readonly Dictionary<string, JsonSerializerOptions> _jsonOptions;
+    private readonly Dictionary<string, Action<HttpClient>> _httpClientOptions;
     private JsonSerializerOptions _defaultJsonOptions;
+    private Action<HttpClient>? _defaultHttpClientOptions;
 
     public HttpButlerOptions()
     {
         _interfaces = [];
         _jsonOptions = [];
+        _httpClientOptions = [];
         _defaultJsonOptions = new();
     }
 
@@ -47,9 +50,10 @@ public class HttpButlerOptions
     /// </summary>
     /// <typeparam name="TIface">Interface.</typeparam>
     /// <param name="jsonOptions">Opciones para el serializador de JSON.</param>
-    public HttpButlerOptions AddHttpInterface<TIface>(JsonSerializerOptions ? jsonOptions = null)
+    /// <param name="httpClientOptions">Opciones para el cliente HTTP.</param>
+    public HttpButlerOptions AddHttpInterface<TIface>(JsonSerializerOptions? jsonOptions = null, Action<HttpClient>? httpClientOptions = null)
         where TIface : class
-        => AddHttpInterface(typeof(TIface), impl: null, jsonOptions);
+        => AddHttpInterface(typeof(TIface), impl: null, jsonOptions, httpClientOptions);
 
     /// <summary>
     /// Agrega una interface.
@@ -57,10 +61,11 @@ public class HttpButlerOptions
     /// <typeparam name="TIface">Interface.</typeparam>
     /// <typeparam name="TImpl">Implementación de la interface.</typeparam>
     /// <param name="jsonOptions">Opciones para el serializador de JSON.</param>
-    public HttpButlerOptions AddHttpInterface<TIface, TImpl>(JsonSerializerOptions? jsonOptions = null)
+    /// <param name="httpClientOptions">Opciones para el cliente HTTP.</param>
+    public HttpButlerOptions AddHttpInterface<TIface, TImpl>(JsonSerializerOptions? jsonOptions = null, Action<HttpClient>? httpClientOptions = null)
         where TIface : class
         where TImpl : class, TIface
-        => AddHttpInterface(typeof(TIface), typeof(TImpl), jsonOptions);
+        => AddHttpInterface(typeof(TIface), typeof(TImpl), jsonOptions, httpClientOptions);
 
     /// <summary>
     /// Agrega una interface.
@@ -68,7 +73,8 @@ public class HttpButlerOptions
     /// <param name="iface">Interface.</param>
     /// <param name="impl">Implementación de la interface.</param>
     /// <param name="jsonOptions">Opciones para el serializador de JSON.</param>
-    internal HttpButlerOptions AddHttpInterface(Type iface, Type? impl, JsonSerializerOptions? jsonOptions = null)
+    /// <param name="httpClientOptions">Opciones para el cliente HTTP.</param>
+    internal HttpButlerOptions AddHttpInterface(Type iface, Type? impl, JsonSerializerOptions? jsonOptions = null, Action<HttpClient>? httpClientOptions = null)
     {
         if (!_interfaces.ContainsKey(iface))
         {
@@ -78,6 +84,9 @@ public class HttpButlerOptions
 
         if (jsonOptions is not null)
             AddInterfaceJsonOptions(iface, jsonOptions);
+
+        if (httpClientOptions is not null)
+            AddInterfaceHttpClientOptions(iface, httpClientOptions);
 
         return this;
     }
@@ -116,6 +125,38 @@ public class HttpButlerOptions
     }
 
     /// <summary>
+    /// Establece las opciones para el <see cref="HttpClient"/> a usar por defecto.
+    /// </summary>
+    /// <param name="options">Acción para configurar el <see cref="HttpClient"/>.</param>
+    public HttpButlerOptions AddDefaultHttpClientOptions(Action<HttpClient> options)
+    {
+        _defaultHttpClientOptions = options;
+        return this;
+    }
+
+    /// <summary>
+    /// Establece las opciones para el <see cref="HttpClient"/> a usar para la interface específicada.
+    /// Esto sobrescribe la configuración por defecto.
+    /// </summary>
+    /// <typeparam name="TIface">Interface a configurar.</typeparam>
+    /// <param name="options">Acción para configurar el <see cref="HttpClient"/>.</param>
+    public HttpButlerOptions AddInterfaceHttpClientOptions<TIface>(Action<HttpClient> options)
+        => AddInterfaceHttpClientOptions(typeof(TIface), options);
+
+    /// <summary>
+    /// Establece las opciones para el <see cref="HttpClient"/> a usar para la interface específicada.
+    /// Esto sobrescribe la configuración por defecto.
+    /// </summary>
+    /// <param name="iface">Interface a configurar.</param>
+    /// <param name="options">Acción para configurar el <see cref="HttpClient"/>.</param>
+    internal HttpButlerOptions AddInterfaceHttpClientOptions(Type iface, Action<HttpClient> options)
+    {
+        var implTypeName = $"gHttpButler_{iface.Name}";
+        _httpClientOptions.Add(implTypeName, options);
+        return this;
+    }
+
+    /// <summary>
     /// Registra las opciones configuradas y servicios necesarios.
     /// </summary>
     /// <param name="services">Colección de servicos.</param>
@@ -140,27 +181,37 @@ public class HttpButlerOptions
 
             if (constainsService(iface))
                 continue;
-            
+
             services.AddScoped(iface, impl);
 
-            // TODO: Separar la lógica, para permitir configuración
-            // personalizada de IHttpClientFactory por interfaz y un Default global.
-            // https://github.com/yoxd707/HttpButler/issues/2
-            Action<HttpClient> configureClient = opt => { };
+            var implName = impl.Name;
 
-            var attr = iface.GetCustomAttributes(typeof(RouteAttribute), true);
+            if (!_httpClientOptions.TryGetValue(implName, out Action<HttpClient>? httpOptions))
+                httpOptions = _defaultHttpClientOptions;
 
-            if (attr.Any())
+            services.AddHttpClient(implName, client =>
             {
-                var route = (RouteAttribute)attr.First();
-                var baseAdress = new Uri(route.Path);
-                configureClient = opt =>
-                {
-                    opt.BaseAddress = baseAdress;
-                };
-            }
+                httpOptions?.Invoke(client);
 
-            services.AddHttpClient(impl.Name, configureClient);
+                // Aplicamos RouteAttribute si existe y no se ha configurado un BaseAddress.
+                // En caso de contener un BaseAddress, se combina con el RouteAttribute.
+                var routeAttr = iface.GetCustomAttribute<RouteAttribute>(true);
+                if (routeAttr != null)
+                {
+                    var path = routeAttr.Path;
+                    if (!string.IsNullOrWhiteSpace(path))
+                    {
+                        if (client.BaseAddress != null)
+                            client.BaseAddress = new Uri(client.BaseAddress, path.TrimStart('/'));
+                        else if (Uri.TryCreate(path, UriKind.Absolute, out var absoluteUri))
+                            client.BaseAddress = absoluteUri;
+                    }
+                }
+
+                // Asegurar que el BaseAddress termine en / para evitar problemas con HttpClient.
+                if (client.BaseAddress is not null && !client.BaseAddress.AbsoluteUri.EndsWith("/"))
+                    client.BaseAddress = new Uri(client.BaseAddress.AbsoluteUri + "/");
+            });
         }
     }
 }
