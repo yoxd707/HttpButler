@@ -12,7 +12,7 @@
     <RepositoryUrl>https://github.com/yoxd707/HttpButler.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <NeutralLanguage>es-419</NeutralLanguage>
-    <PackageVersion>1.0.1-alpha</PackageVersion>
+    <PackageVersion>1.0.2-alpha</PackageVersion>
     <PackageTags>c-sharp;http;client;dotnet;web-api;dotnet-core;source-generator;incremental-generator</PackageTags>
     <Description>Generator de HttpButler, librería ligera de C# que simplifica la creación de clientes HTTP tipados generando automáticamente implementaciones de interfaces mediante source generators.</Description>
     <IncludeBuildOutput>false</IncludeBuildOutput>
@@ -34,7 +34,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="HttpButler" Version="1.0.0-alpha" />
+    <PackageReference Include="HttpButler" Version="1.0.2-alpha" />
     <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="4.9.2" PrivateAssets="all" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.9.2" PrivateAssets="all" />
   </ItemGroup>
